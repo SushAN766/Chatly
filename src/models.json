@@ -1,11 +1,42 @@
 [
-  { "id": "gpt-4o", "name": "GPT-4o", "provider": "OpenAI" },
-  { "id": "gpt-4o-mini", "name": "GPT-4o Mini", "provider": "OpenAI" },
-  { "id": "gemini-1.5-flash", "name": "Gemini Flash", "provider": "Google" },
+  {
+    "id": "gpt-4o",
+    "name": "GPT-4o",
+    "provider": "OpenAI",
+    "description": "Most advanced OpenAI model with multimodal capabilities",
+    "strengths": ["General reasoning", "Code generation", "Creative writing"],
+    "color": "#00D4AA"
+  },
+  {
+    "id": "gpt-4o-mini",
+    "name": "GPT-4o Mini",
+    "provider": "OpenAI",
+    "description": "Lightweight version of GPT-4o, faster and more efficient",
+    "strengths": ["Quick responses", "Simple tasks", "Cost effective"],
+    "color": "#00A67E"
+  },
+  {
+    "id": "gemini-1.5-flash",
+    "name": "Gemini Flash",
+    "provider": "Google",
+    "description": "Google's fast and efficient language model",
+    "strengths": ["Speed", "Factual accuracy", "Web search integration"],
+    "color": "#4285F4"
+  },
   {
     "id": "mistral-large-latest",
     "name": "Mistral Large",
-    "provider": "Mistral"
+    "provider": "Mistral",
+    "description": "High-performance European AI model",
+    "strengths": ["Multilingual", "Code generation", "Reasoning"],
+    "color": "#FF6B35"
   },
-  { "id": "deepseek-chat", "name": "DeepSeek Chat", "provider": "DeepSeek" }
+  {
+    "id": "deepseek-chat",
+    "name": "DeepSeek Chat",
+    "provider": "DeepSeek",
+    "description": "Advanced reasoning and coding capabilities",
+    "strengths": ["Programming", "Mathematics", "Logical reasoning"],
+    "color": "#7C3AED"
+  }
 ]
