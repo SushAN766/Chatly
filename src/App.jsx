@@ -1,18 +1,21 @@
 import { useState, useEffect, useRef } from "react";
-import models from "./models.json";
+
+const reactionEmojis = ["👍", "❤️", "😂", "😮", "😢"];
 
 function App() {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState("");
   const [aiReady, setAiReady] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("gpt-4o");
+  const [isDark, setIsDark] = useState(true);
+  const [showReactions, setShowReactions] = useState(null);
+  const [sparkles, setSparkles] = useState([]);
   const messagesEndRef = useRef(null);
-  const textareaRef = useRef(null);
 
+  // AI ready check
   useEffect(() => {
     const checkReady = setInterval(() => {
-      if (window.puter?.ai?.chat) {
+      if (window.puter && window.puter.ai && typeof window.puter.ai.chat === "function") {
         setAiReady(true);
         clearInterval(checkReady);
       }
@@ -20,25 +23,44 @@ function App() {
     return () => clearInterval(checkReady);
   }, []);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth"
-    });
-  }, [messages]);
+  // Scroll to bottom on new messages
+  const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  useEffect(scrollToBottom, [messages]);
 
-  useEffect(() => {
-    // Auto-resize textarea
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
-    }
-  }, [inputValue]);
-
+  // Add message
   const addMessage = (content, isUser) => {
-    setMessages((prev) => [
-      ...prev,
-      { content, isUser, id: Date.now(), timestamp: new Date().toLocaleTimeString() },
-    ]);
+    setMessages(prev => [...prev, { id: Date.now() + Math.random(), content, isUser, time: new Date(), reactions: [] }]);
+  };
+
+  // Add reaction
+  const addReaction = (messageId, emoji) => {
+    setMessages(prev =>
+      prev.map(m => m.id === messageId ? { ...m, reactions: [...m.reactions, emoji] } : m)
+    );
+    setShowReactions(null);
+  };
+
+  // Send message
+  const sendMessage = async () => {
+    const message = inputValue.trim();
+    if (!message) return;
+    if (!aiReady) {
+      addMessage("Chatly AI is not ready yet.", false);
+      return;
+    }
+    addMessage(message, true);
+    setInputValue("");
+    setIsLoading(true);
+    try {
+      await new Promise(r => setTimeout(r, 1000)); // simulate AI delay
+      const response = await window.puter.ai.chat(message);
+      const reply = typeof response === "string" ? response : response.message?.content || "I'm not sure how to respond.";
+      addMessage(reply, false);
+    } catch (error) {
+      addMessage("An error occurred while chatting.", false);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -48,199 +70,175 @@ function App() {
     }
   };
 
-  const handleModelChange = (e) => {
-    const newModel = e.target.value;
-    setSelectedModel(newModel);
-    const model = models.find((m) => m.id === newModel);
-    addMessage(`Switched to model: ${model.name} (${model.provider})`, false);
-  };
+  const formatTime = (date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  const sendMessage = async () => {
-    const message = inputValue.trim();
-    if (!message || !aiReady || isLoading) return;
-
-    addMessage(message, true);
-    setIsLoading(true);
-    setInputValue("");
-
-    try {
-      const conversation = [
-        {
-          role: "system",
-          content: "You are a helpful AI assistant. Be concise but informative in your responses.",
-        },
-        ...messages.map((msg) => ({
-          role: msg.isUser ? "user" : "assistant",
-          content: msg.content,
-        })),
-        { role: "user", content: message },
-      ];
-
-      const response = await window.puter.ai.chat({
-        model: selectedModel,
-        messages: conversation,
-      });
-
-      const reply = typeof response === "string"
-        ? response
-        : response.message?.content || "No reply received.";
-
-      addMessage(reply, false);
-    } catch (error) {
-      console.error("Error:", error);
-      addMessage("Sorry, there was an error processing your message. Please try again.", false);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const clearChat = () => {
-    setMessages([]);
-  };
-
-  const currentModel = models.find((m) => m.id === selectedModel) || models[0];
+  // Generate floating sparkles
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newSparkle = {
+        id: Date.now() + Math.random(),
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        size: Math.random() * 4 + 2,
+        duration: Math.random() * 8 + 4,
+      };
+      setSparkles(prev => [...prev.slice(-30), newSparkle]); // keep max 30 sparkles
+    }, 500);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
+    <div className={`${isDark ? 'bg-[#1B1B1B] text-gray-200' : 'bg-gradient-to-br from-yellow-50 to-white text-gray-800'} min-h-screen flex flex-col relative overflow-hidden`}>
+
+      {/* Floating Sparkles */}
+      {sparkles.map(s => (
+        <span
+          key={s.id}
+          className="absolute bg-yellow-400 rounded-full opacity-70 animate-fade"
+          style={{
+            width: s.size,
+            height: s.size,
+            top: `${s.y}%`,
+            left: `${s.x}%`,
+            animationDuration: `${s.duration}s`,
+          }}
+        ></span>
+      ))}
+
       {/* Header */}
-      <div className="bg-black/20 backdrop-blur-sm border-b border-white/10 p-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-white bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              Model Mix AI
-            </h1>
-            <p className="text-gray-300 text-sm">Multi-Model Chat Interface</p>
+      <header className="flex items-center justify-between px-8 py-4 border-b border-gray-700 z-10 relative">
+        <h1 className={`${isDark ? 'text-[#FFD700]' : 'text-yellow-600'} text-3xl font-serif`}>Chatly</h1>
+        <button
+          onClick={() => setIsDark(!isDark)}
+          className="px-3 py-1 border rounded-lg text-sm hover:ring-2 hover:ring-yellow-400 transition"
+        >
+          {isDark ? "☀️ Day" : "🌙 Night"}
+        </button>
+      </header>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-6 space-y-4 scrollbar-thin scrollbar-thumb-yellow-400/50 scrollbar-track-transparent relative z-10">
+        
+        {/* Luxury Empty State */}
+        {messages.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-center space-y-3 mt-20">
+            <div className="text-6xl animate-pulse text-[#FFD700]">💎</div>
+            <div className="text-3xl font-bold bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 bg-clip-text text-transparent animate-pulse">
+              Welcome to Chatly
+            </div>
+            <p className="text-gray-400 text-sm">
+              Engage in premium, intelligent conversations with our AI.
+            </p>
+            <div className="mt-4 px-6 py-2 bg-[#111]/70 text-[#FFD700] rounded-full animate-bounce shadow-lg">
+              Type a message below to begin
+            </div>
           </div>
-          
-          {/* Model Selector */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-gray-300 text-sm font-medium">Model:</label>
-              <select
-                value={selectedModel}
-                onChange={handleModelChange}
-                className="bg-white/10 text-white border border-white/20 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 backdrop-blur-sm"
-              >
-                {models.map((model) => (
-                  <option key={model.id} value={model.id} className="bg-gray-900 text-white">
-                    {model.name} ({model.provider})
-                  </option>
+        )}
+
+        {/* Messages Mapping */}
+        {messages.map(mesg => (
+          <div
+            key={mesg.id}
+            className={`relative flex items-end ${mesg.isUser ? 'justify-end' : 'justify-start'} space-x-2 transform hover:-translate-y-1 transition-shadow`}
+            onMouseEnter={() => setShowReactions(mesg.id)}
+            onMouseLeave={() => setShowReactions(null)}
+          >
+            {!mesg.isUser && (
+              <div className="w-10 h-10 bg-[#FFD700] rounded-full flex items-center justify-center text-black font-bold">AI</div>
+            )}
+            <div className={`max-w-md px-6 py-4 rounded-3xl shadow-lg backdrop-blur-sm transition-transform ${mesg.isUser ? (isDark ? 'bg-gray-800 text-white border-gray-700' : 'bg-white/80 text-gray-800 border-gray-300') : (isDark ? 'bg-[#111]/80 text-[#FFD700] border-[#FFD700]/40' : 'bg-yellow-100 text-yellow-600 border-yellow-200')}`}>
+              <div className="flex justify-between text-xs opacity-70 mb-1">
+                <span>{mesg.isUser ? "You" : "Chatly AI"}</span>
+                <span>{formatTime(mesg.time)}</span>
+              </div>
+              <div className="whitespace-pre-wrap">{mesg.content}</div>
+              {mesg.reactions.length > 0 && <div className="flex space-x-1 mt-1">{mesg.reactions.map((r, idx) => <span key={idx}>{r}</span>)}</div>}
+            </div>
+            {mesg.isUser && (
+              <div className="w-10 h-10 bg-[#FFD700] rounded-full flex items-center justify-center text-black font-bold">Y</div>
+            )}
+            {showReactions === mesg.id && (
+              <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 flex bg-gray-700/90 p-2 rounded-full space-x-2 shadow-lg">
+                {reactionEmojis.map((emoji) => (
+                  <span
+                    key={emoji}
+                    className="cursor-pointer hover:scale-125 transition"
+                    onClick={() => addReaction(mesg.id, emoji)}
+                  >
+                    {emoji}
+                  </span>
                 ))}
-              </select>
-            </div>
-            
-            <button
-              onClick={clearChat}
-              className="bg-red-500/20 hover:bg-red-500/30 text-red-300 px-3 py-2 rounded-lg text-sm border border-red-500/30 transition-colors"
-            >
-              Clear Chat
-            </button>
+              </div>
+            )}
           </div>
-        </div>
+        ))}
+
+        {/* AI Typing Indicator with Sparkle */}
+        {isLoading && (
+          <div className="flex items-end space-x-2 relative animate-pulse">
+            <div className="w-10 h-10 bg-[#FFD700] rounded-full flex items-center justify-center text-black font-bold">AI</div>
+            <div className="max-w-md px-6 py-4 rounded-3xl bg-[#111]/80 text-[#FFD700] border border-[#FFD700]/40 shadow-lg backdrop-blur-sm flex items-center gap-2 relative overflow-hidden">
+              <div className="flex space-x-1">
+                <div className="w-3 h-3 bg-[#FFD700] rounded-full animate-bounce"></div>
+                <div className="w-3 h-3 bg-[#FFD700] rounded-full animate-bounce delay-100"></div>
+                <div className="w-3 h-3 bg-[#FFD700] rounded-full animate-bounce delay-200"></div>
+              </div>
+              <span className="text-sm font-medium">Chatly AI is typing...</span>
+
+              {/* Tiny sparkles inside typing bubble */}
+              {[...Array(10)].map((_, i) => (
+                <span
+                  key={i}
+                  className="absolute bg-yellow-400 rounded-full opacity-70 animate-fade"
+                  style={{
+                    width: Math.random() * 3 + 1,
+                    height: Math.random() * 3 + 1,
+                    top: `${Math.random() * 100}%`,
+                    left: `${Math.random() * 100}%`,
+                    animationDuration: `${Math.random() * 3 + 2}s`,
+                  }}
+                ></span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div ref={messagesEndRef}></div>
       </div>
 
-      {/* Chat Messages */}
-      <div className="flex-1 max-w-4xl mx-auto w-full p-4 overflow-hidden flex flex-col">
-        <div className="flex-1 overflow-y-auto space-y-4 mb-4 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/20">
-          {!aiReady && (
-            <div className="text-center py-8">
-              <div className="animate-spin w-8 h-8 border-2 border-purple-400 border-t-transparent rounded-full mx-auto mb-4"></div>
-              <p className="text-gray-400">Initializing AI models...</p>
-            </div>
-          )}
-          
-          {messages.length === 0 && aiReady && (
-            <div className="text-center py-12">
-              <div className="bg-gradient-to-r from-blue-500 to-purple-600 w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-semibold text-white mb-2">Welcome to Model Mix AI</h2>
-              <p className="text-gray-400 mb-4">Choose your preferred AI model and start chatting!</p>
-              <div className="bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10 max-w-md mx-auto">
-                <p className="text-sm text-gray-300">
-                  <span className="text-purple-400 font-medium">Current Model:</span> {currentModel.name} ({currentModel.provider})
-                </p>
-              </div>
-            </div>
-          )}
-
-          {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.isUser ? "justify-end" : "justify-start"} animate-fadeIn`}
-            >
-              <div
-                className={`max-w-[80%] rounded-2xl px-4 py-3 ${
-                  message.isUser
-                    ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white"
-                    : "bg-white/10 backdrop-blur-sm text-gray-100 border border-white/20"
-                }`}
-              >
-                <div className="whitespace-pre-wrap break-words">{message.content}</div>
-                <div className={`text-xs mt-2 ${message.isUser ? "text-blue-100" : "text-gray-400"}`}>
-                  {message.timestamp}
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-3 border border-white/20">
-                <div className="flex items-center space-x-2">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  </div>
-                  <span className="text-gray-300 text-sm">AI is thinking...</span>
-                </div>
-              </div>
-            </div>
-          )}
-          
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Input Area */}
-        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-          <div className="flex items-end gap-3">
-            <div className="flex-1 min-h-[44px]">
-              <textarea
-                ref={textareaRef}
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={aiReady ? "Type your message..." : "Waiting for AI to initialize..."}
-                disabled={!aiReady || isLoading}
-                className="w-full bg-transparent text-white placeholder-gray-400 border-none outline-none resize-none max-h-32 min-h-[44px] leading-6"
-                rows="1"
-              />
-            </div>
-            <button
-              onClick={sendMessage}
-              disabled={!aiReady || isLoading || !inputValue.trim()}
-              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:from-gray-600 disabled:to-gray-700 text-white p-3 rounded-lg transition-all duration-200 disabled:cursor-not-allowed flex-shrink-0"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-              </svg>
-            </button>
-          </div>
-          
-          {aiReady && (
-            <div className="mt-2 flex items-center justify-between text-xs text-gray-400">
-              <span>Press Enter to send, Shift+Enter for new line</span>
-              <span className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                Connected to {currentModel.name}
-              </span>
-            </div>
-          )}
-        </div>
+      {/* Input Section */}
+      <div className="flex p-6 border-t gap-3 border-gray-800 z-10 relative">
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyPress}
+          placeholder={aiReady ? "Type a message..." : "Waiting for AI..."}
+          disabled={!aiReady || isLoading}
+          className={`flex-1 px-6 py-3 rounded-3xl border backdrop-blur-sm focus:outline-none focus:ring-2 transition ${isDark ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:ring-yellow-400' : 'bg-white/80 border-gray-300 text-gray-800 placeholder-gray-600 focus:ring-yellow-400'}`}
+        />
+        <button
+          onClick={sendMessage}
+          disabled={!aiReady || isLoading || !inputValue.trim()}
+          className="px-6 py-3 bg-[#FFD700] text-black font-bold rounded-3xl hover:brightness-110 transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Send
+        </button>
       </div>
+
+      {/* Sparkle animation CSS */}
+      <style>{`
+        @keyframes fade {
+          0% { opacity: 0; transform: translateY(0px); }
+          50% { opacity: 0.8; transform: translateY(-10px); }
+          100% { opacity: 0; transform: translateY(-20px); }
+        }
+        .animate-fade {
+          animation-name: fade;
+          animation-timing-function: ease-in-out;
+          animation-iteration-count: infinite;
+        }
+      `}</style>
     </div>
   );
 }
