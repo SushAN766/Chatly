@@ -1,10 +1,9 @@
-# Chatly 
+# Chatly AI
 
 **Chatly** is a sleek AI-powered conversation developed with **React**, styled with **Tailwind CSS**, and powered by the **Puter.js** SDK for intelligent interactions.
 
+Available online via [Vercel](https://chatly-3xw5.vercel.app/)
 
-
----
 
 ##  Features
 
@@ -15,18 +14,15 @@
 - Smooth animations and scrolling
 - Modern, responsive design
 
----
-
 ##  Tech Stack
 
 - **Frontend**: React, Vite  
 - **Styling**: Tailwind CSS  
 - **AI Engine**: Puter.js  
 
----
-Available online via [Vercel](https://chatly-3xw5.vercel.app/)
 
----
+
+
 
 ##  Deployment (Vercel)
 
@@ -46,7 +42,7 @@ npm run build
 ```
 
 
----
+
 
 
 ## Installation
@@ -65,9 +61,9 @@ yarn dev
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 
----
 
-###  Future Enhancements
+
+##  Future Enhancements
 
 - **Multimodal AI Model Selection**: We plan to integrate multiple AI models, allowing users to choose from options such as:
 
